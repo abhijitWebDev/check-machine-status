@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -30,11 +31,14 @@ func main() {
     for scanner.Scan() {
         line := scanner.Text()
         parts := strings.Split(line, " ")
-        if len(parts) != 2 {
-            fmt.Println("Invalid line:", line)
-            continue
+        host := Host{}
+        if len(parts) >= 1 {
+            host.IP = parts[0]
         }
-        hosts = append(hosts, Host{IP: parts[0], URL: parts[1]})
+        if len(parts) >= 2 {
+            host.URL = parts[1]
+        }
+        hosts = append(hosts, host)
     }
 
     if err := scanner.Err(); err != nil {
@@ -47,12 +51,24 @@ func main() {
     f.SetCellValue("Sheet1", "B1", "URL")
     f.SetCellValue("Sheet1", "C1", "Status")
 
+    // Set column widths
+    f.SetColWidth("Sheet1", "A", "A", 30)
+    f.SetColWidth("Sheet1", "B", "B", 30)
+    f.SetColWidth("Sheet1", "C", "C", 30)
+
     for i, host := range hosts {
         upCount := 0
         for j := 0; j < 5; j++ {
-            resp, err := http.Get(host.URL)
-            if err == nil && resp.StatusCode == 200 {
-                upCount++
+            if host.URL != "" {
+                resp, err := http.Get(host.URL)
+                if err == nil && resp.StatusCode == 200 {
+                    upCount++
+                }
+            } else if host.IP != "" {
+                _, err := net.DialTimeout("tcp", net.JoinHostPort(host.IP, "80"), time.Second)
+                if err == nil {
+                    upCount++
+                }
             }
             time.Sleep(1 * time.Second) // wait for a second before the next request
         }
@@ -65,7 +81,9 @@ func main() {
         f.SetCellValue("Sheet1", fmt.Sprintf("B%d", i+2), host.URL)
     }
 
-    if err := f.SaveAs("output.xlsx"); err != nil {
+    timestamp := time.Now().Format("20060102_150405")
+    filename := fmt.Sprintf("output_%s.xlsx", timestamp)
+    if err := f.SaveAs(filename); err != nil {
         fmt.Println(err)
     }
 }
