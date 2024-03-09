@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/360EntSecGroup-Skylar/excelize"
+	"github.com/vbauerster/mpb"
+	"github.com/vbauerster/mpb/decor"
 )
 
 type Host struct {
@@ -57,6 +59,17 @@ func main() {
     f.SetColWidth("Sheet1", "B", "B", 30)
     f.SetColWidth("Sheet1", "C", "C", 30)
 
+    // Create a new progress bar
+    p := mpb.New(mpb.WithWidth(60))
+    bar := p.AddBar(int64(len(hosts)),
+        mpb.PrependDecorators(
+            decor.CountersNoUnit("%d / %d", decor.WCSyncSpace),
+        ),
+        mpb.AppendDecorators(
+            decor.Percentage(decor.WCSyncSpace),
+        ),
+    )
+
     for i, host := range hosts {
         upCount := 0
         for j := 0; j < 5; j++ {
@@ -86,7 +99,13 @@ func main() {
         }
         f.SetCellValue("Sheet1", fmt.Sprintf("A%d", i+2), host.IP)
         f.SetCellValue("Sheet1", fmt.Sprintf("B%d", i+2), host.URL)
+
+        // Increment the progress bar
+        bar.Increment()
     }
+
+    // Wait for the progress bar to finish
+    p.Wait()
 
     timestamp := time.Now().Format("20060102_150405")
     filename := fmt.Sprintf("output_%s.xlsx", timestamp)
