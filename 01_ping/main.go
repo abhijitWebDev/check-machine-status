@@ -3,9 +3,9 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -65,10 +65,11 @@ func main() {
                     upCount++
                 }
             } else if host.IP != "" {
-                _, err := net.DialTimeout("tcp", net.JoinHostPort(host.IP, "80"), time.Second)
+                cmd := exec.Command("ping", "-c", "1", "-W", "1", host.IP)
+                err := cmd.Run()
                 if err == nil {
-                    upCount++
-                }
+                upCount++
+              }     
             }
             time.Sleep(1 * time.Second) // wait for a second before the next request
         }
