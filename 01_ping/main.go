@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
@@ -65,11 +66,16 @@ func main() {
                     upCount++
                 }
             } else if host.IP != "" {
-                cmd := exec.Command("ping", "-c", "1", "-W", "1", host.IP)
+                var cmd *exec.Cmd
+                if runtime.GOOS == "windows" {
+                    cmd = exec.Command("ping", "-n", "1", "-w", "1000", host.IP)
+                } else {
+                    cmd = exec.Command("ping", "-c", "1", "-W", "1", host.IP)
+                }
                 err := cmd.Run()
                 if err == nil {
-                upCount++
-              }     
+                    upCount++
+                }
             }
             time.Sleep(1 * time.Second) // wait for a second before the next request
         }
